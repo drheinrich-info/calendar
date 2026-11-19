@@ -14,7 +14,9 @@ Output defaults to ./events.json (override with argv[2] or OUTPUT env var).
 
 Output: a JSON array, sorted by start, of
     {"title", "start", "end", "location", "allDay"}
-with timed values as ISO 8601 in Asia/Tokyo (+09:00).
+with timed values as ISO 8601 in Asia/Tokyo (+09:00). When an event's
+description contains a FANY ticket URL (https://ticket.fany.lol/...),
+the first such URL is added as "url"; the field is omitted otherwise.
 
 Window: events whose start falls from 14 days before today to 150 days
 after today (Asia/Tokyo) are kept.
@@ -30,6 +32,7 @@ Limitations:
 
 import json
 import os
+import re
 import sys
 import urllib.request
 from datetime import date, datetime, time, timedelta
@@ -41,6 +44,10 @@ TOKYO = ZoneInfo("Asia/Tokyo")
 WINDOW_BEFORE = timedelta(days=14)
 WINDOW_AFTER = timedelta(days=150)
 DEFAULT_TIMED_DURATION = timedelta(hours=1)
+
+# First FANY ticket URL in an event description. The URL runs until
+# whitespace or a character that commonly delimits it in Japanese text.
+FANY_URL_RE = re.compile(r"https://ticket\.fany\.lol/[^\s<>\"'」）】]*")
 
 
 def load_ics(source: str) -> bytes:
@@ -95,13 +102,22 @@ def main(argv):
         if not (window_start <= start <= window_end):
             continue
 
-        events.append({
+        event = {
             "title": str(component.get("SUMMARY", "")).strip(),
             "start": start.isoformat(),
             "end": end.isoformat(),
             "location": str(component.get("LOCATION", "")).strip(),
             "allDay": all_day,
-        })
+        }
+
+        # Link target for the SCHEDULE list: the first FANY ticket URL
+        # found in the description, if any.
+        description = str(component.get("DESCRIPTION", ""))
+        match = FANY_URL_RE.search(description)
+        if match:
+            event["url"] = match.group(0)
+
+        events.append(event)
 
     events.sort(key=lambda e: (e["start"], e["title"]))
 

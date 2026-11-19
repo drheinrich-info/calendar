@@ -14,7 +14,11 @@
     --line:rgba(180,156,255,.18);
   }
   *{box-sizing:border-box}
-  html{background:var(--base)}
+  html{background:var(--base);scrollbar-width:thin;scrollbar-color:#B49CFF #0D0D17}
+  ::-webkit-scrollbar{width:8px;height:8px}
+  ::-webkit-scrollbar-track{background:#0D0D17}
+  ::-webkit-scrollbar-thumb{background:rgba(180,156,255,.55);border-radius:4px}
+  ::-webkit-scrollbar-thumb:hover{background:#B49CFF}
   body{
     margin:0;
     background:var(--panel);
