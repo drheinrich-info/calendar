@@ -1,0 +1,175 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Today — Dr.Heinrich information</title>
+<style>
+  :root{
+    --base:#050508;
+    --panel:#0D0D17;
+    --text:#F2F0FA;
+    --muted:#9A94B8;
+    --accent:#B49CFF;
+    --line:rgba(180,156,255,.18);
+  }
+  *{box-sizing:border-box}
+  html{background:var(--base)}
+  body{
+    margin:0;
+    background:var(--panel);
+    color:var(--text);
+    font-family:-apple-system,BlinkMacSystemFont,"Hiragino Sans","Noto Sans JP",sans-serif;
+    -webkit-font-smoothing:antialiased;
+  }
+  .wrap{max-width:720px;margin:0 auto;padding:28px 22px 32px}
+  .label{
+    font-size:11px;letter-spacing:.32em;text-transform:uppercase;
+    color:var(--accent);font-weight:600;margin:0 0 10px;
+  }
+  .date-jp{font-size:22px;font-weight:600;letter-spacing:.04em;margin:0 0 6px}
+  .sub{font-size:12px;color:var(--muted);letter-spacing:.08em;margin:0 0 24px}
+  ul.events{list-style:none;margin:0;padding:0}
+  li.event{
+    display:flex;gap:16px;align-items:baseline;
+    padding:14px 0;border-top:1px solid var(--line);
+  }
+  li.event:last-child{border-bottom:1px solid var(--line)}
+  .time{
+    flex:0 0 auto;min-width:108px;
+    color:var(--accent);font-size:14px;font-weight:600;
+    font-variant-numeric:tabular-nums;letter-spacing:.03em;white-space:nowrap;
+  }
+  .time.allday{min-width:108px;font-size:12px;letter-spacing:.18em}
+  .main{min-width:0}
+  .title{font-size:15px;line-height:1.55;word-break:break-word}
+  .location{font-size:12px;color:var(--muted);line-height:1.5;margin-top:3px;word-break:break-word}
+  .empty{font-size:14px;color:var(--muted);padding:22px 0;border-top:1px solid var(--line);border-bottom:1px solid var(--line)}
+  .error{font-size:13px;color:var(--muted);padding:22px 0}
+  @media (max-width:420px){
+    .wrap{padding:22px 16px 26px}
+    li.event{flex-direction:column;gap:4px}
+    .time{min-width:0}
+    .date-jp{font-size:20px}
+  }
+</style>
+</head>
+<body>
+  <main class="wrap">
+    <p class="label" id="label">— TODAY</p>
+    <h1 class="date-jp" id="date-jp">読み込み中…</h1>
+    <p class="sub">TODAY'S SCHEDULE</p>
+    <div id="content"><p class="empty">読み込み中…</p></div>
+  </main>
+<script>
+(function(){
+  "use strict";
+  var TZ = "Asia/Tokyo";
+  var MONTHS = ["JAN","FEB","MAR","APR","MAY","JUN","JUL","AUG","SEP","OCT","NOV","DEC"];
+  var WEEKDAYS_JP = ["日","月","火","水","木","金","土"];
+
+  // Format a Date as YYYY-MM-DD in Asia/Tokyo, regardless of viewer timezone.
+  function tokyoDateKey(d){
+    var parts = new Intl.DateTimeFormat("en-CA",{
+      timeZone:TZ, year:"numeric", month:"2-digit", day:"2-digit"
+    }).formatToParts(d);
+    var y,m,dd;
+    parts.forEach(function(p){
+      if(p.type==="year") y=p.value;
+      if(p.type==="month") m=p.value;
+      if(p.type==="day") dd=p.value;
+    });
+    return y + "-" + m + "-" + dd;
+  }
+
+  // Weekday index (0=Sun) for a Date in Asia/Tokyo.
+  function tokyoWeekday(d){
+    var wd = new Intl.DateTimeFormat("en-US",{timeZone:TZ, weekday:"short"}).format(d);
+    return ["Sun","Mon","Tue","Wed","Thu","Fri","Sat"].indexOf(wd);
+  }
+
+  function tokyoParts(d){
+    var parts = new Intl.DateTimeFormat("en-CA",{
+      timeZone:TZ, year:"numeric", month:"2-digit", day:"2-digit"
+    }).formatToParts(d);
+    var out={};
+    parts.forEach(function(p){ out[p.type]=p.value; });
+    return out;
+  }
+
+  // HH:MM (24h) in Asia/Tokyo.
+  function tokyoTime(d){
+    return new Intl.DateTimeFormat("en-GB",{
+      timeZone:TZ, hour:"2-digit", minute:"2-digit", hour12:false
+    }).format(d);
+  }
+
+  function esc(s){
+    return String(s == null ? "" : s)
+      .replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;")
+      .replace(/"/g,"&quot;").replace(/'/g,"&#39;");
+  }
+
+  function render(events){
+    var now = new Date();
+    var todayKey = tokyoDateKey(now);
+    var p = tokyoParts(now);
+    var monthNum = parseInt(p.month,10);
+    var dayNum = parseInt(p.day,10);
+
+    document.getElementById("label").textContent =
+      MONTHS[monthNum-1] + " " + dayNum + " — TODAY";
+    document.getElementById("date-jp").textContent =
+      monthNum + "月" + dayNum + "日（" + WEEKDAYS_JP[tokyoWeekday(now)] + "）";
+
+    var todays = (events || []).filter(function(ev){
+      if(!ev || !ev.start) return false;
+      return tokyoDateKey(new Date(ev.start)) === todayKey;
+    }).sort(function(a,b){
+      // All-day events first, then by start time.
+      if(!!a.allDay !== !!b.allDay) return a.allDay ? -1 : 1;
+      return new Date(a.start) - new Date(b.start);
+    });
+
+    var box = document.getElementById("content");
+    if(!todays.length){
+      box.innerHTML = '<p class="empty">本日の公演・予定はありません</p>';
+      return;
+    }
+    var html = '<ul class="events">';
+    todays.forEach(function(ev){
+      var timeHtml;
+      if(ev.allDay){
+        timeHtml = '<div class="time allday">終日</div>';
+      } else {
+        var s = tokyoTime(new Date(ev.start));
+        var e = ev.end ? tokyoTime(new Date(ev.end)) : "";
+        timeHtml = '<div class="time">' + esc(e ? (s + "–" + e) : s) + '</div>';
+      }
+      html += '<li class="event">' + timeHtml +
+        '<div class="main"><div class="title">' + esc(ev.title) + '</div>' +
+        (ev.location ? '<div class="location">' + esc(ev.location) + '</div>' : '') +
+        '</div></li>';
+    });
+    html += '</ul>';
+    box.innerHTML = html;
+  }
+
+  function load(){
+    var url = "events.json?t=" + Date.now();
+    fetch(url, {cache:"no-store"})
+      .then(function(r){ if(!r.ok) throw new Error("HTTP " + r.status); return r.json(); })
+      .then(render)
+      .catch(function(){
+        document.getElementById("content").innerHTML =
+          '<p class="error">予定を読み込めませんでした</p>';
+      });
+  }
+
+  load();
+  // Re-fetch every 30 minutes while the page stays open.
+  setInterval(load, 30 * 60 * 1000);
+})();
+</script>
+</body>
+</html>
