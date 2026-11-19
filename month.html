@@ -191,8 +191,7 @@
           timeHtml = '<div class="time allday">終日</div>';
         } else {
           var s = tokyoTime(new Date(ev.start));
-          var e = ev.end ? tokyoTime(new Date(ev.end)) : "";
-          timeHtml = '<div class="time">' + esc(e ? (s + "–" + e) : s) + '</div>';
+          timeHtml = '<div class="time">' + esc(s) + '</div>';
         }
         html += '<li class="event">' + timeHtml +
           '<div class="main"><div class="title">' + esc(ev.title) + '</div>' +
