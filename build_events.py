@@ -16,7 +16,10 @@ Output: a JSON array, sorted by start, of
     {"title", "start", "end", "location", "allDay"}
 with timed values as ISO 8601 in Asia/Tokyo (+09:00). When an event's
 description contains a FANY ticket URL (https://ticket.fany.lol/...),
-the first such URL is added as "url"; the field is omitted otherwise.
+the first such URL is added as "url". Otherwise, when the description
+contains a YouTube URL (https://www.youtube.com/...), the first such
+URL is added as "url" instead. The field is omitted when neither is
+present; no other URLs are ever picked.
 
 Window: events whose start falls from 14 days before today to 150 days
 after today (Asia/Tokyo) are kept.
@@ -45,9 +48,12 @@ WINDOW_BEFORE = timedelta(days=14)
 WINDOW_AFTER = timedelta(days=150)
 DEFAULT_TIMED_DURATION = timedelta(hours=1)
 
-# First FANY ticket URL in an event description. The URL runs until
-# whitespace or a character that commonly delimits it in Japanese text.
+# Link URLs recognised in an event description, in priority order:
+# a FANY ticket URL wins; a YouTube URL is the fallback. Each URL runs
+# until whitespace or a character that commonly delimits it in
+# Japanese text.
 FANY_URL_RE = re.compile(r"https://ticket\.fany\.lol/[^\s<>\"'」）】]*")
+YOUTUBE_URL_RE = re.compile(r"https://(?:www\.)?youtube\.com/[^\s<>\"'」）】]*")
 
 
 def load_ics(source: str) -> bytes:
@@ -111,9 +117,9 @@ def main(argv):
         }
 
         # Link target for the SCHEDULE list: the first FANY ticket URL
-        # found in the description, if any.
+        # in the description; if there is none, the first YouTube URL.
         description = str(component.get("DESCRIPTION", ""))
-        match = FANY_URL_RE.search(description)
+        match = FANY_URL_RE.search(description) or YOUTUBE_URL_RE.search(description)
         if match:
             event["url"] = match.group(0)
 
