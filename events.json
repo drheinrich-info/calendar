@@ -376,5 +376,21 @@
     "location": "COOL JAPAN PARK OSAKA TTホール",
     "allDay": false,
     "url": "https://ticket.fany.lol/reception/73127/58176"
+  },
+  {
+    "title": "NORA寄席",
+    "start": "2027-01-18T19:00:00+09:00",
+    "end": "2027-01-18T20:00:00+09:00",
+    "location": "大須演芸場",
+    "allDay": false,
+    "url": "https://ticket.fany.lol/reception/76461/60737"
+  },
+  {
+    "title": "NORAハイパーコーナーライブ！",
+    "start": "2027-01-18T20:30:00+09:00",
+    "end": "2027-01-18T21:30:00+09:00",
+    "location": "大須演芸場",
+    "allDay": false,
+    "url": "https://ticket.fany.lol/reception/76461/60738"
   }
 ]
